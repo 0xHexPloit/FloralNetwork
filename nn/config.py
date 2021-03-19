@@ -3,6 +3,7 @@
 #####################
 NUM_EPOCHS = 50
 OPTIMIZER = "Adam"
+BATCH_SIZE = 5
 
 ########################
 # Loss function params
