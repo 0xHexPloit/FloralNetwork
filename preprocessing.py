@@ -7,6 +7,7 @@ import numpy as np
 import skimage
 from skimage import io, color, filters, transform, exposure, morphology
 from scipy import signal, sparse
+import random
 
 def gen_stroke_map(img, kernel_size, num_of_directions=8):
     height = img.shape[0]
@@ -123,13 +124,13 @@ def gen_pencil_texture(img, H, J):
 
 def get_sketched_image(img):
     #img = cv2.imread(image_path,1)
-    img_yuv = cv2.cvtColor(ex_img, cv2.COLOR_BGR2YUV)
+    img_yuv = cv2.cvtColor(img, cv2.COLOR_BGR2YUV)
     img_y_ch = img_yuv[:,:,0]
     pencil_file = random.choice(os.listdir("./pencil_styles"))
     pencil_tex = io.imread(pencil_file, as_gray=True)
-    img_stroke_map = gen_stroke_map(ex_img_y_ch, 3)
-    img_tone_map_0 = gen_tone_map(ex_img_y_ch, w_group=0)
-    img_tex_map = gen_pencil_texture(ex_img_y_ch, pencil_tex, img_tone_map_0)
+    img_stroke_map = gen_stroke_map(img_y_ch, 3)
+    img_tone_map = gen_tone_map(img_y_ch, w_group=0)
+    img_tex_map = gen_pencil_texture(img_y_ch, pencil_tex, img_tone_map)
     sketched_image = np.multiply(img_stroke_map, img_tex_map)
     sketched_image = cv2.normalize(sketched_image, None, alpha = 0, beta = 255, norm_type = cv2.NORM_MINMAX, dtype = cv2.CV_32F)
     sketched_image = sketched_image.astype(np.uint8)
