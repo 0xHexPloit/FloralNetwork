@@ -127,8 +127,10 @@ def get_sketched_image(img):
     img_y_ch = img_yuv[:,:,0]
     pencil_file = random.choice(os.listdir("./pencil_styles"))
     pencil_tex = io.imread(pencil_file, as_gray=True)
-    img_tone_map_0 = gen_tone_map(img_y_ch, w_group=0)
-    img_tex_map = gen_pencil_texture(img_y_ch, pencil_tex, img_tone_map_0)
-    sketched_image = cv2.normalize(img_tex_map, None, alpha = 0, beta = 255, norm_type = cv2.NORM_MINMAX, dtype = cv2.CV_32F)
-    sketched_image = norm_image.astype(np.uint8)
+    img_stroke_map = gen_stroke_map(ex_img_y_ch, 3)
+    img_tone_map_0 = gen_tone_map(ex_img_y_ch, w_group=0)
+    img_tex_map = gen_pencil_texture(ex_img_y_ch, pencil_tex, img_tone_map_0)
+    sketched_image = np.multiply(img_stroke_map, img_tex_map)
+    sketched_image = cv2.normalize(sketched_image, None, alpha = 0, beta = 255, norm_type = cv2.NORM_MINMAX, dtype = cv2.CV_32F)
+    sketched_image = sketched_image.astype(np.uint8)
     return sketched_image
