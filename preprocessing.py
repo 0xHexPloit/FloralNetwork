@@ -126,7 +126,7 @@ def get_sketched_image(img):
     #img = cv2.imread(image_path,1)
     img_yuv = cv2.cvtColor(img, cv2.COLOR_BGR2YUV)
     img_y_ch = img_yuv[:,:,0]
-    pencil_file = random.choice(os.listdir("./pencil_styles"))
+    pencil_file = "./pencil_styles/" + random.choice(os.listdir("./pencil_styles"))
     pencil_tex = io.imread(pencil_file, as_gray=True)
     img_stroke_map = gen_stroke_map(img_y_ch, 3)
     img_tone_map = gen_tone_map(img_y_ch, w_group=0)
