@@ -1,7 +1,6 @@
 from argparse import ArgumentParser
-import utils
-import storage
-import numpy as np
+from utils import storage, path, image
+import generator
 
 arg_parser = ArgumentParser()
 
@@ -13,10 +12,11 @@ if __name__ == "__main__":
     args = arg_parser.parse_args()
 
     # Determining output path
-    file_name, directory_path = utils.get_output_path_data(args.image, args.output)
+    file_name, directory_path = path.get_output_path_data(args.image, args.output)
 
-    # Fake image
-    fake_image = np.zeros((50, 50, 3))
+    # Generate image
+    image = image.get_image_from_path(args.image)
+    generated_image = generator.generate_image(image)
 
     # Saving generated image
-    storage.save_image_to_disk(fake_image, file_name, directory_path)
+    storage.save_image_to_disk(generated_image, file_name, directory_path)

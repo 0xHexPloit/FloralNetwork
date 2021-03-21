@@ -6,16 +6,21 @@ from nn.transforms import Rescale, Normalize, ToTensor
 from nn.generator import Generator
 from nn.discriminator import Discriminator
 from nn.loss import loss_generator, loss_discriminator
-from console import Console
+from utils.console import Console
+from utils.logs import Logs
+from utils import storage
 import torch
 import nn.config as config
 import numpy as np
+
+# Getting hyper_params
+hp = config.hyper_params
 
 ################################################
 # TRANSFORMS
 ################################################
 composed = Compose([
-    Rescale((config.IMG_INPUT_SIZE, config.IMG_INPUT_SIZE)),
+    Rescale((hp.IMG_INPUT_SIZE, hp.IMG_INPUT_SIZE)),
     Normalize(),
     ToTensor()
 ])
@@ -40,26 +45,32 @@ val_floral_dataset = FloralDataset(
 ################################################
 train_dataloader = DataLoader(
     train_floral_dataset,
-    batch_size=config.BATCH_SIZE,
+    batch_size=hp.BATCH_SIZE,
     shuffle=True,
     num_workers=0
 )
 val_dataloader = DataLoader(
     val_floral_dataset,
-    batch_size=config.BATCH_SIZE,
+    batch_size=hp.BATCH_SIZE,
     shuffle=False,
     num_workers=0
 )
+
+################################################
+# Logs
+################################################
+logs = Logs()
+logs.initialize(hyperparams=hp)
 
 ################################################
 # TRAINING
 ################################################
 
 # Defining number batches
-number_batches = len(train_floral_dataset) // config.BATCH_SIZE
+number_batches = (len(train_floral_dataset) // hp.BATCH_SIZE) + 1
 
 # Calculate output size of the image discriminator (PatchGan)
-patch = (1, config.IMG_INPUT_SIZE // 2 ** 4, config.IMG_INPUT_SIZE // 2 ** 4)
+patch = (1, hp.IMG_INPUT_SIZE // 2 ** 4, hp.IMG_INPUT_SIZE // 2 ** 4)
 
 # Initialize generator and discriminator
 generator = Generator()
@@ -68,25 +79,26 @@ discriminator = Discriminator()
 # Defining optimizers
 optimizer_G = torch.optim.Adam(
     generator.parameters(),
-    lr=config.LEARNING_RATE,
-    betas=(config.BETA_1, config.BETA_2)
+    lr=hp.LEARNING_RATE,
+    betas=(hp.BETA_1, hp.BETA_2)
 )
 
 optimizer_D = torch.optim.Adam(
     discriminator.parameters(),
-    lr=config.LEARNING_RATE,
-    betas=(config.BETA_1, config.BETA_2)
+    lr=hp.LEARNING_RATE,
+    betas=(hp.BETA_1, hp.BETA_2)
 )
-
-
 
 # we use GPU if available, otherwise CPU
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 Console.print_info("Training is about to start...")
 
-for epoch in range(config.NUM_EPOCHS):
-    Console.print_epoch(epoch + 1, config.NUM_EPOCHS)
+for epoch in range(hp.NUM_EPOCHS):
+    Console.print_epoch(epoch + 1, hp.NUM_EPOCHS)
+
+    # Setting generator into training mode
+    generator.train()
 
     for batch_idx, batch in enumerate(train_dataloader):
         # Model inputs
@@ -139,33 +151,39 @@ for epoch in range(config.NUM_EPOCHS):
 
         Console.print_info(f" Both model has been trained on batch [{batch_idx+1}/{number_batches}]")
 
-    # Printing test results
-    Console.print_test_results(
-        epoch + 1,
-        config.NUM_EPOCHS,
-        generator_loss=loss_G.item(),
-        discriminator_loss=loss_D.item()
+    # Saving training results
+    logs.write_epoch_data(
+        epoch+1,
+        hp.NUM_EPOCHS,
+        loss_G.item(),
+        loss_D.item(),
+        print_to_console=True
     )
 
     # Visualising data generated
     if epoch > 0 and epoch == config.IMAGE_DISPLAY_VERBOSE:
-        for batch_idx, batch in enumerate(val_dataloader):
-            # Model inputs
-            sketches = Variable(batch["sketch"]).to(device)
-            flowers = Variable(batch["flower"]).to(device)
+        generator.eval()
 
-            fake_flowers = generator(sketches)
+        with torch.no_grad():
+            for batch_idx, batch in enumerate(val_dataloader):
+                # Model inputs
+                sketches = Variable(batch["sketch"]).to(device)
+                flowers = Variable(batch["flower"]).to(device)
 
-            flowers = flowers.detach().numpy()
-            fake_flowers = fake_flowers.detach().numpy()
+                fake_flowers = generator(sketches)
 
-            true_flower = flowers[0]
-            true_flower = true_flower.transpose((1, 2, 0))
+                flowers = flowers.detach().numpy()
+                fake_flowers = fake_flowers.detach().numpy()
 
-            fake_flower = fake_flowers[0]
-            fake_flower = fake_flower.transpose((1, 2, 0))
+                true_flower = flowers[0]
+                true_flower = true_flower.transpose((1, 2, 0))
 
-            if np.min(fake_flower) >= 0:
+                fake_flower = fake_flowers[0]
+                fake_flower = fake_flower.transpose((1, 2, 0))
+
                 Console.display_gan_image(fake_flower, true_flower)
-            else:
-                Console.print_info("Cannot visualize the picture")
+
+
+# Saving generator if necessary
+if config.save_generator:
+    storage.save_generator(generator, config.generator_filename)
