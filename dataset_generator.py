@@ -28,12 +28,14 @@ from math import ceil
 import os
 import tarfile
 import wget
+import time 
 import ssl
 
 ssl._create_default_https_context = ssl._create_unverified_context
 
 ### Utils ###
 
+start = time.time()
 # Ensure reproductibility in all places
 def seed_all(seed):
     print(">>> Using Seed : ", seed, " <<<")
@@ -71,6 +73,7 @@ url = "https://www.robots.ox.ac.uk/~vgg/data/flowers/102/102flowers.tgz"
 filename = wget.download(url, out="./data")  # out=dir_path
 print("Sucessfully downloaded the 102 flowers dataset.")
 print("Filename : ", filename)
+print("Time elapsed : ", (time.time()-start))
 
 # unzip file, it is a gzipped tar file
 file = tarfile.open(filename)  # open file
@@ -166,7 +169,7 @@ for folder in ["./data/train", "./data/val", "./data/test"]:
 ## Transforms
 
 # basic transform
-# TODO : how to make a square crop of maximum size ? 
+
 def resize(img_list, batch_size):
     transform = transforms.Compose([
         transforms.ToPILImage(),
@@ -306,13 +309,6 @@ for l in loaders:
 # for all the images stored in the "flowers" subfolders, create a sketch equivalent
 # and store it under the same name in the corresponding "sketches" subfolder
 
-def sketcher1(img_bgr, ksize=(21, 21)):
-    img_gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
-    img_blur = cv2.GaussianBlur(img_gray, ksize, 0, 0)
-    img_blend = cv2.divide(img_gray, img_blur, scale=256)
-    return img_blend
-
-
 class SketchesDataset(Dataset):
     """
     image_list : list of image paths as strings
@@ -336,15 +332,9 @@ class SketchesDataset(Dataset):
         if self.transforms is not None:
             img = self.transforms(img)
         if self.sketcher is not None:
-<<<<<<< HEAD
             BGR_img = cv2.imread(self.image_list[i],1) # open as BGR image
             img = self.sketcher(BGR_img) # transform to sketch
         return (torch.tensor(img,dtype=torch.float).clone().detach(), self.image_list[i]) # sourceTensor.clone().detach()
-=======
-            BGR_img = cv2.imread(self.image_list[i], 1)  # open as BGR image
-            img = self.sketcher(BGR_img)  # transform to sketch
-        return (torch.tensor(img, dtype=torch.float).clone().detach(), image_list[i])  # sourceTensor.clone().detach()
->>>>>>> fadb80a74f7db6a4ed434f75049171f0fbbf99ae
 
 
 train_files = glob.glob(("./data/train/flowers/" + '*.jpg'))
@@ -367,6 +357,14 @@ for [files, to_folder] in [[test_files, "./data/test/sketches"], [val_files, "./
             k += 1
     print("Total number of sketch images in directory %s : %s" % (to_folder, k))
 
+# Delete the original images which are in .data/flowers102/
+for path in glob.glob(("./data/flowers102/"+'*.jpg')):
+    os.remove(path)
+os.rmdir('./data/flowers102/')
+
+
+### Recap ###
+
 print("\n\nRecap: ")
 N = 0  # total files
 for dirpath, dirnames, filenames in os.walk("./data"):
@@ -375,3 +373,6 @@ for dirpath, dirnames, filenames in os.walk("./data"):
     print("Number of files in %s : %s" % (dirpath, N_c))
 
 print("Total number of files : %s" % N)
+
+print("\n\nTotal time elapsed to build the dataset : ", (time.time()-start))
+
