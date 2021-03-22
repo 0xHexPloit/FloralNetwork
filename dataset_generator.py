@@ -318,7 +318,7 @@ class SketchesDataset(Dataset):
         if self.sketcher is not None:
             BGR_img = cv2.imread(self.image_list[i],1) # open as BGR image
             img = self.sketcher(BGR_img) # transform to sketch
-        return (torch.tensor(img,dtype=torch.float).clone().detach(), image_list[i]) # sourceTensor.clone().detach()
+        return (torch.tensor(img,dtype=torch.float).clone().detach(), self.image_list[i]) # sourceTensor.clone().detach()
 
 
 train_files = glob.glob(("./data/train/flowers/"+'*.jpg'))
