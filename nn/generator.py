@@ -1,6 +1,53 @@
-from collections import OrderedDict
 from torch import nn
 import torch
+
+
+class UnetDown(nn.Module):
+    def __init__(self, in_channels, features):
+        super().__init__()
+
+        self.conv1 = nn.Conv2d(in_channels, features, 3, 1, 1, bias=False)
+        self.conv2 = nn.Conv2d(features, features, 3, 1, 1, bias=False)
+        self.batch_norm = nn.BatchNorm2d(num_features=features)
+        self.activation = nn.ReLU(inplace=True)
+
+    def forward(self, x):
+        out = self.conv1(x)
+        out = self.batch_norm(out)
+        out = self.activation(out)
+        out = self.conv2(out)
+        out = self.batch_norm(out)
+        out = self.activation(out)
+
+        return out
+
+
+class UnetUp(nn.Module):
+    def __init__(self, in_channels, features):
+        super().__init__()
+
+        self.conv_transpose = nn.ConvTranspose2d(
+            in_channels,
+            features,
+            kernel_size=2,
+            stride=2,
+            bias=False
+        )
+        self.conv1 = nn.Conv2d(features * 2, features, kernel_size=3, padding=1, bias=False)
+        self.conv2 = nn.Conv2d(features, features, kernel_size=3, padding=1, bias=False)
+        self.batch_norm = nn.BatchNorm2d(num_features=features)
+        self.activation = nn.ReLU(inplace=True)
+
+    def forward(self, x1, x2):
+        out = self.conv_transpose(x1)
+        out = self.conv1(torch.cat([out, x2], dim=1))
+        out = self.batch_norm(out)
+        out = self.activation(out)
+        out = self.conv2(out)
+        out = self.batch_norm(out)
+        out = self.activation(out)
+
+        return out
 
 
 class Unet(nn.Module):
@@ -13,92 +60,53 @@ class Unet(nn.Module):
         self.max_pooling = nn.MaxPool2d(kernel_size=2, stride=2)
 
         # First conv block
-        self.encoder1 = Unet._block(in_channels, features, name="enc1")
+        self.down1 = UnetDown(in_channels, features)
 
         # Second conv block
-        self.encoder2 = Unet._block(features, features * 2, name="enc2")
+        self.down2 = UnetDown(features, features * 2)
 
         # Third conv block
-        self.encoder3 = Unet._block(features * 2, features * 4, name="enc3")
+        self.down3 = UnetDown(features * 2, features * 4)
 
         # Forth conv block
-        self.encoder4 = Unet._block(features * 4, features * 8, name="enc4")
+        self.down4 = UnetDown(features * 4, features * 8)
 
         # Bottleneck
-        self.bottleneck = Unet._block(features * 8, features * 16, name="bottleneck")
+        self.bottleneck = UnetDown(features * 8, features * 16)
 
         # First deconv block
-        self.upconv4 = nn.ConvTranspose2d(features * 16, features * 8, kernel_size=(2, 2), stride=(2, 2))
-        self.decoder4 = Unet._block((features * 8) * 2, features * 8, name="dec4")
+        self.up4 = UnetUp(features * 16, features * 8)
 
         # Second deconv block
-        self.upconv3 = nn.ConvTranspose2d(features * 8, features * 4, kernel_size=(2, 2), stride=(2, 2))
-        self.decoder3 = Unet._block((features * 4) * 2, features * 4, name="dec3")
+        self.up3 = UnetUp(features * 8, features * 4)
 
         # Third deconv block
-        self.upconv2 = nn.ConvTranspose2d(features * 4, features * 2, kernel_size=(2, 2), stride=(2, 2))
-        self.decoder2 = Unet._block((features * 2) * 2, features * 2, name="dec2")
+        self.up2 = UnetUp(features * 4, features * 2)
 
         # Forth deconv block
-        self.upconv1 = nn.ConvTranspose2d((features * 2) * 2, features * 2, kernel_size=(2, 2), stride=(2, 2))
-        self.decoder1 = Unet._block(features * 2, features, name="dec1")
+        self.up1 = UnetUp(features * 2, features)
 
         # Final conv
         self.final_conv = nn.Conv2d(features, out_channels, kernel_size=(1, 1))
         self.final = nn.Sequential(nn.Tanh())
 
     def forward(self, x):
-        enc1 = self.encoder1(x)
-        enc2 = self.encoder2(self.max_pooling(enc1))
-        enc3 = self.encoder3(self.max_pooling(enc2))
-        enc4 = self.encoder4(self.max_pooling(enc3))
+        down1 = self.down1(x)
+        down2 = self.down2(self.max_pooling(down1))
+        down3 = self.down3(self.max_pooling(down2))
+        down4 = self.down4(self.max_pooling(down3))
 
-        bottleneck = self.bottleneck(self.max_pooling(enc4))
+        bottleneck = self.bottleneck(self.max_pooling(down4))
 
-        dec4 = self.upconv4(bottleneck)
-        dec4 = self.decoder4(torch.cat((dec4, enc4), dim=1))
+        up4 = self.up4(bottleneck, down4)
+        up3 = self.up3(up4, down3)
+        up2 = self.up2(up3, down2)
+        up1 = self.up1(up2, down1)
 
-        dec3 = self.upconv3(dec4)
-        dec3 = self.decoder3(torch.cat((dec3, enc3), dim=1))
+        out = self.final_conv(up1)
+        out = self.final(out)
 
-        dec2 = self.upconv2(dec3)
-        dec2 = self.decoder2(torch.cat((dec2, enc2), dim=1))
-
-        dec1 = self.upconv1(dec2)
-        dec1 = self.decoder1(torch.cat((dec1, enc1), dim=1))
-
-        return self.final(self.final_conv(dec1))
-
-    @staticmethod
-    def _block(in_channels, features, name):
-        return nn.Sequential(OrderedDict([
-            (f"{name}-conv1", nn.Conv2d(
-                in_channels=in_channels,
-                out_channels=features,
-                kernel_size=(3, 3),
-                padding=(1, 1),
-                bias=False
-            )),
-            (f"{name}-bn1", nn.BatchNorm2d(
-                num_features=features
-            )),
-            (f"{name}-relu1", nn.ReLU(
-                inplace=True
-            )),
-            (f"{name}-conv2", nn.Conv2d(
-                in_channels=features,
-                out_channels=features,
-                kernel_size=(3, 3),
-                padding=(1, 1),
-                bias=False
-            )),
-            (f"{name}-norm2", nn.BatchNorm2d(
-                num_features=features
-            )),
-            (f"{name}-relu2", nn.ReLU(
-                inplace=True
-            ))
-        ]))
+        return out
 
 
 # Syntactic sugar

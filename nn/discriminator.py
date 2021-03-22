@@ -3,34 +3,27 @@ import torch
 
 
 class Discriminator(nn.Module):
-    def __init__(self, in_channels=3):
-        super().__init__()
+    def __init__(self, in_channels=4):
+        super(Discriminator, self).__init__()
 
-        self.block1 = self._block(in_channels * 2, 64, normalization=False)
-        self.block2 = self._block(64, 128)
-        self.block3 = self._block(128, 256)
-        self.block4 = self._block(256, 512)
+        def discriminator_block(in_filters, out_filters, normalization=True):
+            """Returns downsampling layers of each discriminator block"""
+            layers = [nn.Conv2d(in_filters, out_filters, 4, stride=2, padding=1)]
+            if normalization:
+                layers.append(nn.InstanceNorm2d(out_filters))
+            layers.append(nn.LeakyReLU(0.2, inplace=True))
+            return layers
 
-        self.zero_pad = nn.ZeroPad2d((1, 0, 1, 0))
-        self.final_conv = nn.Conv2d(512, 1, kernel_size=(4, 4), padding=(1, 1), bias=False)
+        self.model = nn.Sequential(
+            *discriminator_block(4, 64, normalization=False),
+            *discriminator_block(64, 128),
+            *discriminator_block(128, 256),
+            *discriminator_block(256, 512),
+            nn.ZeroPad2d((1, 0, 1, 0)),
+            nn.Conv2d(512, 1, 4, padding=1, bias=False)
+        )
 
-    def forward(self, sketch_image, colorful_image):
+    def forward(self, img_a, img_b):
         # Concatenate image and condition image by channels to produce input
-        img_input = torch.cat((sketch_image, colorful_image), 1)
-        bc1 = self.block1(img_input)
-        bc2 = self.block2(bc1)
-        bc3 = self.block3(bc2)
-        bc4 = self.block4(bc3)
-        out = self.zero_pad(bc4)
-        return self.final_conv(out)
-
-    @staticmethod
-    def _block(in_filters, out_filters, normalization=True):
-        layers = [nn.Conv2d(in_filters, out_filters, kernel_size=(4, 4), stride=(2, 2), padding=(1, 1))]
-
-        if normalization:
-            layers.append(nn.BatchNorm2d(out_filters))
-
-        layers.append(nn.ReLU(inplace=True))
-
-        return nn.Sequential(*layers)
+        img_input = torch.cat((img_a, img_b), 1)
+        return self.model(img_input)
