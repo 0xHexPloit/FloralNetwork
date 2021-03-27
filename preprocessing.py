@@ -72,7 +72,7 @@ def gen_tone_map(img, w_group=0):
     # calculate the CDF of the desired histogram:
     P = np.cumsum(p_normalized)
     # calculate the original histogram:
-    h = exposure.histogram(img, nbins=256)
+    h, bins = np.histogram(img.ravel(),256,[0,256])
     # CDF of original:
     H = np.cumsum(h / np.sum(h))
     # histogram matching:
