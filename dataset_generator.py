@@ -270,7 +270,7 @@ for [files, to_folder] in [[test_files, "./data/test/flowers"], [val_files, "./d
         for j in range(images_batch.shape[0]):
             img_aug = images_batch[j]
             path = to_folder + '/img_' + str(loader_id) + str(k) + '.jpg'
-            save_image(img_aug, path)
+            save_image(img_aug, path, normalize=True)
             k += 1
     print("Total number of resized images in directory %s : %s" % (to_folder, k))
 
@@ -296,7 +296,7 @@ for l in loaders:
         for j in range(images_batch.shape[0]):
             img_aug = images_batch[j]
             path = output_directory + '/imgaug_' + str(loader_id) + str(k) + '.jpg'
-            save_image(img_aug, path)
+            save_image(img_aug, path, normalize=True)
             k += 1
     print("Total number of processsed images with loader %s : %s" % (loader_id, k))
     loader_id += 1
@@ -353,7 +353,7 @@ for [files, to_folder] in [[test_files, "./data/test/sketches"], [val_files, "./
             img_aug = images_batch[j]
             filename = filenames[j].split('/')[-1]
             path = os.path.join(to_folder, filename)
-            save_image(img_aug, path)
+            save_image(img_aug, path, normalize=True)
             k += 1
     print("Total number of sketch images in directory %s : %s" % (to_folder, k))
 
