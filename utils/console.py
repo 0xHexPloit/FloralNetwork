@@ -20,7 +20,11 @@ class Console:
         print(f"# Visualization of a generated image")
         print("########################################")
 
-        plt.imshow(np.hstack([rescale_image(fake_image), true_image]))
+        gan_image = rescale_image(fake_image)
+
+        plt.imshow(gan_image)
+        plt.show()
+        plt.imshow(true_image)
         plt.show()
 
     @staticmethod

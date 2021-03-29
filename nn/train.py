@@ -13,6 +13,9 @@ import torch
 import nn.config as config
 import numpy as np
 
+from utils.image import rescale_image
+from matplotlib import pyplot as plt
+
 # Getting hyper_params
 hp = config.hyper_params
 
@@ -94,8 +97,8 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 Console.print_info("Training is about to start...")
 
-for epoch in range(hp.NUM_EPOCHS):
-    Console.print_epoch(epoch + 1, hp.NUM_EPOCHS)
+for epoch in range(1, hp.NUM_EPOCHS + 1):
+    Console.print_epoch(epoch, hp.NUM_EPOCHS)
 
     # Setting generator into training mode
     generator.train()
@@ -118,6 +121,7 @@ for epoch in range(hp.NUM_EPOCHS):
 
         # Computing generator loss
         fake_flowers = generator(sketches)
+
         predictions_fake = discriminator(sketches, fake_flowers)
 
         # Computing the loss
@@ -153,7 +157,7 @@ for epoch in range(hp.NUM_EPOCHS):
 
     # Saving training results
     logs.write_epoch_data(
-        epoch+1,
+        epoch,
         hp.NUM_EPOCHS,
         loss_G.item(),
         loss_D.item(),
@@ -161,7 +165,7 @@ for epoch in range(hp.NUM_EPOCHS):
     )
 
     # Visualising data generated
-    if epoch > 0 and epoch == config.IMAGE_DISPLAY_VERBOSE:
+    if epoch % config.IMAGE_DISPLAY_VERBOSE == 0:
         generator.eval()
 
         with torch.no_grad():
