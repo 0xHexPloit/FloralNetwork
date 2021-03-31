@@ -1,17 +1,14 @@
 from datetime import datetime
 from utils.console import Console
-import os
+from path import LOGS_PATH
+
 
 class Logs:
     _path: str
 
     def __init__(self, file_name=None):
-        sep = os.path.sep
-        dir_path = f"{os.path.sep}".join(os.path.abspath(__file__).split(os.path.sep)[:-2])
-        dir_path = f"{dir_path}{sep}nn{sep}logs{sep}"
-
         file_name = f"{file_name}.txt" if file_name else f"training_logs_{datetime.now()}.txt"
-        self._path = f"{dir_path}{file_name}"
+        self._path = f"{LOGS_PATH}{file_name}"
 
     def initialize(self, hyperparams: dict):
         with open(self._path, "w") as file:

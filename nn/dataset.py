@@ -1,13 +1,14 @@
 from torch.utils.data import Dataset
 from glob import glob
+from path import DATA_PATH
 import torch
 import cv2
 
 
 class FloralDataset(Dataset):
-    def __init__(self, root_dir, transform=None):
-        self.files = glob(f"{root_dir}/sketches/*")
-        self.root_dir = root_dir
+    def __init__(self, folder_name, transform=None):
+        self.files = glob(f"{DATA_PATH}{folder_name}/sketches/*")
+        self.folder_name = folder_name
         self.transform = transform
 
     def __len__(self):
@@ -18,8 +19,8 @@ class FloralDataset(Dataset):
             idx = idx.to_list()
 
         file = self.files[idx].split("/")[-1]
-        flower_path = f"{self.root_dir}/flowers/{file}"
-        sketch_path = f"{self.root_dir}/sketches/{file}"
+        flower_path = f"{DATA_PATH}{self.folder_name}/flowers/{file}"
+        sketch_path = f"{DATA_PATH}{self.folder_name}/sketches/{file}"
 
         flower_img = cv2.imread(flower_path)
         flower_img = cv2.cvtColor(flower_img, cv2.COLOR_BGR2RGB)
