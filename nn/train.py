@@ -95,7 +95,15 @@ optimizer_D = torch.optim.Adam(
     betas=(hp.BETA_1, hp.BETA_2)
 )
 
+# Keeping trace of losses
+loss_G = None
+previous_loss = np.inf
+
 for epoch in range(1, hp.NUM_EPOCHS + 1):
+    # Setting previous loss for generator
+    if loss_G is not None:
+        previous_loss = loss_G
+
     Console.print_epoch(epoch, hp.NUM_EPOCHS)
 
     # Setting generator into training mode
@@ -153,8 +161,6 @@ for epoch in range(1, hp.NUM_EPOCHS + 1):
 
         Console.print_info(f" Both model has been trained on batch [{batch_idx+1}/{number_batches}]")
 
-        break
-
     # Saving training results
     logs.write_epoch_data(
         epoch,
@@ -163,6 +169,10 @@ for epoch in range(1, hp.NUM_EPOCHS + 1):
         loss_D.item(),
         print_to_console=True
     )
+
+    # Saving generator if performance increased during training
+    if config.save_generator and loss_G < previous_loss:
+        storage.save_generator(generator, config.generator_filename)
 
     # Visualising data generated
     if epoch % config.IMAGE_DISPLAY_VERBOSE == 0:
@@ -176,8 +186,8 @@ for epoch in range(1, hp.NUM_EPOCHS + 1):
 
                 fake_flowers = generator(sketches)
 
-                flowers = flowers.detach().numpy()
-                fake_flowers = fake_flowers.detach().numpy()
+                flowers = flowers.detach().cpu().numpy()
+                fake_flowers = fake_flowers.detach().cpu().numpy()
 
                 image_idx = random.choice(range(len(flowers)))
 
@@ -193,7 +203,3 @@ for epoch in range(1, hp.NUM_EPOCHS + 1):
                 Console.display_gan_image(fake_flower, true_flower)
 
                 break
-
-# Saving generator if necessary
-if config.save_generator:
-    storage.save_generator(generator, config.generator_filename)

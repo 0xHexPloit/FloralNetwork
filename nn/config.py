@@ -4,7 +4,7 @@ from dotmap import DotMap
 # HYPER-PARAMS
 #####################
 hyper_params = DotMap(dict(
-    NUM_EPOCHS=1,
+    NUM_EPOCHS=2,
     BATCH_SIZE=32,
     IMG_INPUT_SIZE=256,
     PENCIL_STYLE="sketch",

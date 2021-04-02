@@ -1,0 +1,19 @@
+=====================
+  TRAINING LOGS
+======================
+
+----- HYPER-PARAMETERS -----
+NUM_EPOCHS: 2
+BATCH_SIZE: 32
+IMG_INPUT_SIZE: 256
+PENCIL_STYLE: sketch
+OPTIMIZER: Adam
+LEARNING_RATE: 0.0002
+BETA_1: 0.5
+BETA_2: 0.999
+------------------------------
+
+--------- TRAINING PERFORMANCE [1/2] ---------
+G_LOSS: 69.63800048828125
+D_LOSS: 0.14685159921646118
+---------------------------------------------------

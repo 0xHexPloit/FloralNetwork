@@ -40,7 +40,10 @@ def save_generator(generator: torch.nn.Module, filename: str):
     :param generator: the generator to save
     :param filename: the name that we should give to the generator that we are going to save
     """
-    torch.save(generator.state_dict(), f"{GENERATOR_PATH}{filename}.pt")
+    file_path = f"{GENERATOR_PATH}{filename}.pt"
+    if os.path.isfile(file_path):
+        os.remove(file_path)
+    torch.save(generator.state_dict(), file_path)
 
 
 def load_generator() -> torch.nn.Module:
