@@ -114,50 +114,40 @@ for epoch in range(1, hp.NUM_EPOCHS + 1):
         sketches = Variable(batch["sketch"]).to(device)
         flowers = Variable(batch["flower"]).to(device)
 
-        # Adversarial ground truth
-        valid = Variable(torch.FloatTensor(np.ones((sketches.size(0), *patch)))).to(device)
-        fake = Variable(torch.FloatTensor(np.zeros((sketches.size(0), *patch)))).to(device)
-
-        # ------------------
-        #  Train Generators
-        # ------------------
-
-        # Resetting gradient to zero for generator
-        optimizer_G.zero_grad()
-
-        # Computing generator loss
+        # Generating fake images
         fake_flowers = generator(sketches)
 
-        predictions_fake = discriminator(sketches, fake_flowers)
-
-        # Computing the loss
-        loss_G = loss_generator(predictions_fake, fake_flowers, flowers)
-
-        # Computing gradient
-        loss_G.backward()
-
-        # Updating parameters
-        optimizer_G.step()
-
-        # ------------------
-        #  Train Discriminator
-        # ------------------
-
-        # Resetting gradient to zero for generator
+        # ------------------------
+        #  Updating discriminator
+        # ------------------------
+        discriminator.requires_grad(True)
         optimizer_D.zero_grad()
 
-        # Computing predictions for real and fake images
-        predictions_real = discriminator(sketches, flowers)
-        predictions_fake = discriminator(sketches, fake_flowers.detach())
-
-        # Computing loss
-        loss_D = loss_discriminator(predictions_fake, predictions_real)
+        # Computing the loss
+        loss_D = loss_discriminator(sketches, fake_flowers, flowers, discriminator)
 
         # Computing gradient
         loss_D.backward()
 
         # Updating parameters
         optimizer_D.step()
+
+        # ---------------------
+        #  Updating generator
+        # ---------------------
+
+        # Resetting gradient to zero for generator and preventing discriminator to be updated
+        discriminator.requires_grad(False)
+        optimizer_G.zero_grad()
+
+        # Computing loss
+        loss_G = loss_generator(sketches, fake_flowers, flowers, discriminator)
+
+        # Computing gradient
+        loss_G.backward()
+
+        # Updating parameters
+        optimizer_G.step()
 
         Console.print_info(f" Both model has been trained on batch [{batch_idx+1}/{number_batches}]")
 
